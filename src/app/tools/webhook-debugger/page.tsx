@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { ChevronDown, ChevronRight } from "lucide-react"
 
 type HttpMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS"
 
@@ -42,6 +44,7 @@ export default function WebhookDebuggerPage() {
   const [respContentType, setRespContentType] = useState<string>("application/json")
   const [respHeaders, setRespHeaders] = useState<string>("{}")
   const [respBody, setRespBody] = useState<string>("{\n  \"ok\": true\n}")
+  const [isCustomResponseOpen, setIsCustomResponseOpen] = useState<boolean>(false)
 
   const effectiveSpaceId = useMemo(() => {
     const slug = spaceId.trim().replace(/^\/+|\/+$/g, "")
@@ -179,32 +182,41 @@ export default function WebhookDebuggerPage() {
           </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">Custom Response</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
-            <Input type="number" value={respStatus} onChange={(e) => setRespStatus(Number(e.target.value))} placeholder="Status (e.g. 200)" />
-            <Input type="number" value={respDelay} onChange={(e) => setRespDelay(Number(e.target.value))} placeholder="Delay ms (e.g. 0)" />
-            <Input value={respContentType} onChange={(e) => setRespContentType(e.target.value)} placeholder="Content-Type" />
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={loadConfig}>Load</Button>
-              <Button onClick={saveConfig}>Save</Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div>
-              <div className="text-sm font-medium mb-1">Headers (JSON)</div>
-              <textarea className="w-full h-48 text-xs rounded border bg-muted p-2" value={respHeaders} onChange={(e) => setRespHeaders(e.target.value)} />
-            </div>
-            <div>
-              <div className="text-sm font-medium mb-1">Body (supports {'{{id}}'}, {'{{spaceId}}'}, {'{{method}}'}, {'{{url}}'})</div>
-              <textarea className="w-full h-48 text-xs rounded border bg-muted p-2" value={respBody} onChange={(e) => setRespBody(e.target.value)} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Collapsible open={isCustomResponseOpen} onOpenChange={setIsCustomResponseOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+              <CardTitle className="flex items-center gap-2">
+                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isCustomResponseOpen ? 'rotate-90' : ''}`} />
+                Custom Response
+              </CardTitle>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+                <Input type="number" value={respStatus} onChange={(e) => setRespStatus(Number(e.target.value))} placeholder="Status (e.g. 200)" />
+                <Input type="number" value={respDelay} onChange={(e) => setRespDelay(Number(e.target.value))} placeholder="Delay ms (e.g. 0)" />
+                <Input value={respContentType} onChange={(e) => setRespContentType(e.target.value)} placeholder="Content-Type" />
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={loadConfig}>Load</Button>
+                  <Button onClick={saveConfig}>Save</Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <div className="text-sm font-medium mb-1">Headers (JSON)</div>
+                  <textarea className="w-full h-48 text-xs rounded border bg-muted p-2" value={respHeaders} onChange={(e) => setRespHeaders(e.target.value)} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium mb-1">Body (supports {'{{id}}'}, {'{{spaceId}}'}, {'{{method}}'}, {'{{url}}'})</div>
+                  <textarea className="w-full h-48 text-xs rounded border bg-muted p-2" value={respBody} onChange={(e) => setRespBody(e.target.value)} />
+                </div>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-1">
           <CardHeader>

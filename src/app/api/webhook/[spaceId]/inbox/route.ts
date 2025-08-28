@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { headers as nextHeaders } from "next/headers"
 import { webhookStore, isRateLimited } from "@/lib/webhook/store"
+import { captureAndStore } from "@/lib/webhook/capture"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -43,30 +44,7 @@ async function handleCapture(req: NextRequest, { spaceId }: { params?: never; sp
   if (isRateLimited(`${spaceId}:${ip}`)) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
   }
-
-  const url = new URL(req.url)
-  const method = req.method as any
-  const contentType = req.headers.get("content-type") || undefined
-  const headersObj: Record<string, string> = {}
-  req.headers.forEach((v, k) => (headersObj[k] = v))
-
-  let bodyRaw: string | undefined
-  try {
-    bodyRaw = await req.text()
-  } catch {}
-
-  const entry = webhookStore.append(spaceId, {
-    method,
-    url: url.pathname + url.search,
-    headers: headersObj,
-    query: Object.fromEntries(url.searchParams.entries()),
-    ip,
-    bodyRaw,
-    contentType,
-    spaceId,
-  } as any)
-
-  return NextResponse.json({ id: entry.id }, { status: 201 })
+  return captureAndStore(req, spaceId)
 }
 
 

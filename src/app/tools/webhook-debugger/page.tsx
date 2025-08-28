@@ -35,30 +35,38 @@ export default function WebhookDebuggerPage() {
   const [search, setSearch] = useState("")
   const [method, setMethod] = useState<HttpMethod>("ALL")
   const [copyUrl, setCopyUrl] = useState("")
+  const [customPath, setCustomPath] = useState<string>("")
   const eventRef = useRef<EventSource | null>(null)
+
+  const effectiveSpaceId = useMemo(() => {
+    const slug = spaceId.trim().replace(/^\/+|\/+$/g, "")
+    return slug || defaultSpaceId
+  }, [spaceId])
 
   const inboxUrl = useMemo(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : ""
-    return `${origin}/api/webhook/${spaceId}/inbox`
-  }, [spaceId])
+    const suffix = customPath.trim().replace(/^\/+|\/+$/g, "")
+    const extra = suffix ? `/${encodeURI(suffix)}` : ""
+    return `${origin}/api/webhook/${encodeURI(effectiveSpaceId)}${extra}`
+  }, [effectiveSpaceId, customPath])
 
   useEffect(() => {
     setCopyUrl(inboxUrl)
   }, [inboxUrl])
 
   const fetchList = async () => {
-    const u = new URL(`/api/webhook/${spaceId}/requests`, window.location.origin)
+    const u = new URL(`/api/webhook/${effectiveSpaceId}/requests`, window.location.origin)
     if (search) u.searchParams.set("search", search)
     if (method) u.searchParams.set("method", method)
     const res = await fetch(u.toString())
     const data = await res.json()
-    setItems(data.items)
+    setItems(Array.isArray(data.items) ? data.items : [])
   }
 
   useEffect(() => {
     fetchList().catch(() => {})
     eventRef.current?.close()
-    const es = new EventSource(`/api/webhook/${spaceId}/events`)
+    const es = new EventSource(`/api/webhook/${effectiveSpaceId}/events`)
     eventRef.current = es
     es.onmessage = (e) => {
       if (!e.data) return
@@ -75,7 +83,7 @@ export default function WebhookDebuggerPage() {
     return () => {
       es.close()
     }
-  }, [spaceId])
+  }, [effectiveSpaceId])
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -84,7 +92,15 @@ export default function WebhookDebuggerPage() {
     return () => clearTimeout(t)
   }, [search, method, spaceId])
 
-  const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? items[0], [items, selectedId])
+  const selected = useMemo(() => {
+    const list = Array.isArray(items) ? items : []
+    if (!list.length) return undefined
+    if (selectedId) {
+      const found = list.find((i) => i.id === selectedId)
+      if (found) return found
+    }
+    return list[0]
+  }, [items, selectedId])
 
   const bodyPretty = useMemo(() => {
     if (!selected?.bodyRaw) return ""
@@ -112,9 +128,16 @@ export default function WebhookDebuggerPage() {
           <CardTitle className="flex items-center gap-2">Your unique endpoint</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 items-center">
-            <Input value={copyUrl} onChange={(e) => setCopyUrl(e.target.value)} readOnly />
-            <Button variant="outline" onClick={copy}>Copy</Button>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <Input value={copyUrl} onChange={(e) => setCopyUrl(e.target.value)} readOnly />
+              <Button variant="outline" onClick={copy}>Copy</Button>
+            </div>
+            <div className="flex gap-2 items-center">
+              <Input placeholder="Custom key (required), e.g. my-secret-endpoint" value={spaceId} onChange={(e) => setSpaceId(e.target.value)} />
+              <Input placeholder="Optional extra path, e.g. order/created" value={customPath} onChange={(e) => setCustomPath(e.target.value)} />
+              <Button variant="outline" onClick={() => { setCustomPath(""); }}>Reset</Button>
+            </div>
           </div>
         </CardContent>
       </Card>

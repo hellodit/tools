@@ -54,6 +54,7 @@ const data = {
         { title: "JSON to Table", url: "/tools/table" },
         { title: "Go Log Debugger", url: "/tools/go-log-debugger" },
         { title: "JSON Beautifier", url: "/tools/json-beautifier" },
+        { title: "Webhook Debugger", url: "/tools/webhook-debugger" },
       ],
     },
   ],

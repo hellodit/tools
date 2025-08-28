@@ -37,6 +37,11 @@ export default function WebhookDebuggerPage() {
   const [copyUrl, setCopyUrl] = useState("")
   const [customPath, setCustomPath] = useState<string>("")
   const eventRef = useRef<EventSource | null>(null)
+  const [respStatus, setRespStatus] = useState<number>(200)
+  const [respDelay, setRespDelay] = useState<number>(0)
+  const [respContentType, setRespContentType] = useState<string>("application/json")
+  const [respHeaders, setRespHeaders] = useState<string>("{}")
+  const [respBody, setRespBody] = useState<string>("{\n  \"ok\": true\n}")
 
   const effectiveSpaceId = useMemo(() => {
     const slug = spaceId.trim().replace(/^\/+|\/+$/g, "")
@@ -90,7 +95,7 @@ export default function WebhookDebuggerPage() {
       fetchList().catch(() => {})
     }, 300)
     return () => clearTimeout(t)
-  }, [search, method, spaceId])
+  }, [search, method, effectiveSpaceId])
 
   const selected = useMemo(() => {
     const list = Array.isArray(items) ? items : []
@@ -117,6 +122,39 @@ export default function WebhookDebuggerPage() {
     toast.success("URL copied")
   }
 
+  const loadConfig = async () => {
+    const res = await fetch(`/api/webhook/${effectiveSpaceId}/config`)
+    const cfg = await res.json()
+    setRespStatus(Number(cfg.status ?? 200))
+    setRespDelay(Number(cfg.delayMs ?? 0))
+    setRespContentType(String(cfg.contentType ?? cfg.headers?.["content-type"] ?? "application/json"))
+    setRespHeaders(JSON.stringify(cfg.headers ?? { "content-type": cfg.contentType ?? "application/json" }, null, 2))
+    setRespBody(typeof cfg.body === "string" ? cfg.body : JSON.stringify(cfg.body ?? { ok: true }, null, 2))
+  }
+
+  const saveConfig = async () => {
+    try {
+      const headersObj = JSON.parse(respHeaders || "{}")
+      if (respContentType) headersObj["content-type"] = respContentType
+      const payload = {
+        status: respStatus,
+        delayMs: respDelay,
+        contentType: respContentType,
+        headers: headersObj,
+        body: respBody,
+      }
+      const res = await fetch(`/api/webhook/${effectiveSpaceId}/config`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) })
+      if (!res.ok) throw new Error("Failed")
+      toast.success("Saved response config")
+    } catch {
+      toast.error("Invalid headers JSON")
+    }
+  }
+
+  useEffect(() => {
+    loadConfig().catch(() => {})
+  }, [effectiveSpaceId])
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -141,7 +179,32 @@ export default function WebhookDebuggerPage() {
           </div>
         </CardContent>
       </Card>
-
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">Custom Response</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+            <Input type="number" value={respStatus} onChange={(e) => setRespStatus(Number(e.target.value))} placeholder="Status (e.g. 200)" />
+            <Input type="number" value={respDelay} onChange={(e) => setRespDelay(Number(e.target.value))} placeholder="Delay ms (e.g. 0)" />
+            <Input value={respContentType} onChange={(e) => setRespContentType(e.target.value)} placeholder="Content-Type" />
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={loadConfig}>Load</Button>
+              <Button onClick={saveConfig}>Save</Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div>
+              <div className="text-sm font-medium mb-1">Headers (JSON)</div>
+              <textarea className="w-full h-48 text-xs rounded border bg-muted p-2" value={respHeaders} onChange={(e) => setRespHeaders(e.target.value)} />
+            </div>
+            <div>
+              <div className="text-sm font-medium mb-1">Body (supports {'{{id}}'}, {'{{spaceId}}'}, {'{{method}}'}, {'{{url}}'})</div>
+              <textarea className="w-full h-48 text-xs rounded border bg-muted p-2" value={respBody} onChange={(e) => setRespBody(e.target.value)} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-1">
           <CardHeader>
@@ -218,6 +281,8 @@ export default function WebhookDebuggerPage() {
           </CardContent>
         </Card>
       </div>
+
+  
     </div>
   )
 }

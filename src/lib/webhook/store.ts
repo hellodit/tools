@@ -30,12 +30,21 @@ export interface WebhookSpace {
   name?: string
 }
 
+export interface WebhookResponseConfig {
+  status: number
+  headers: Record<string, string>
+  body: string
+  contentType?: string
+  delayMs?: number
+}
+
 type Subscriber = (event: WebhookRequestRecord) => void
 
 class InMemoryWebhookStore {
   private spaces: Map<string, WebhookSpace> = new Map()
   private recordsBySpace: Map<string, WebhookRequestRecord[]> = new Map()
   private subscribersBySpace: Map<string, Set<Subscriber>> = new Map()
+  private responseConfigBySpace: Map<string, WebhookResponseConfig> = new Map()
 
   createSpace(name?: string): WebhookSpace {
     const id = randomUUID()
@@ -75,7 +84,9 @@ class InMemoryWebhookStore {
     subs.forEach((cb) => {
       try {
         cb(full)
-      } catch {}
+      } catch (e) {
+        console.error(`[WebhookStore] Subscriber error:`, e)
+      }
     })
     return full
   }
@@ -107,9 +118,23 @@ class InMemoryWebhookStore {
     set.add(cb)
     return () => set.delete(cb)
   }
+
+  setResponseConfig(spaceId: string, cfg: WebhookResponseConfig) {
+    this.ensureSpace(spaceId)
+    this.responseConfigBySpace.set(spaceId, cfg)
+  }
+
+  getResponseConfig(spaceId: string): WebhookResponseConfig | undefined {
+    return this.responseConfigBySpace.get(spaceId)
+  }
 }
 
-export const webhookStore = new InMemoryWebhookStore()
+// Use a global variable to persist across module reloads in development
+declare global {
+  var __webhookStore: InMemoryWebhookStore | undefined
+}
+
+export const webhookStore = globalThis.__webhookStore || (globalThis.__webhookStore = new InMemoryWebhookStore())
 
 // Very small IP based leaky bucket limiter for capture endpoint
 const tokenBuckets = new Map<string, { tokens: number; lastRefill: number }>()

@@ -29,10 +29,33 @@ export async function captureAndStore(req: NextRequest, spaceId: string) {
     ip,
     bodyRaw,
     contentType,
-    spaceId,
   } as any)
 
-  return NextResponse.json({ id: entry.id }, { status: 201 })
+  // Build response based on optional per-space config
+  const cfg = webhookStore.getResponseConfig(spaceId)
+  if (!cfg) {
+    return NextResponse.json({ id: entry.id }, { status: 201 })
+  }
+
+  // Simple token replacement: allow using {{id}}, {{spaceId}}, {{method}}, {{url}}
+  const replacements: Record<string, string> = {
+    id: entry.id,
+    spaceId: spaceId,
+    method: entry.method,
+    url: entry.url,
+  }
+  let body = cfg.body ?? ""
+  body = body.replace(/\{\{(\w+)\}\}/g, (_, k) => (k in replacements ? replacements[k] : ""))
+
+  const headers = new Headers(cfg.headers ?? {})
+  if (cfg.contentType && !headers.has("content-type")) headers.set("content-type", cfg.contentType)
+
+  const delay = Math.max(0, Number(cfg.delayMs ?? 0))
+  if (delay > 0) {
+    await new Promise((r) => setTimeout(r, delay))
+  }
+
+  return new NextResponse(body, { status: cfg.status ?? 200, headers })
 }
 
 

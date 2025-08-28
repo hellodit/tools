@@ -2,17 +2,19 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
-  Bot,
-  Command,
-  GalleryVerticalEnd,
-  SquareTerminal,
+  CheckCircle,
+  FileText,
+  Search,
+  Table,
+  Code,
+  Home,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Sidebar,
   SidebarContent,
@@ -24,45 +26,34 @@ import {
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "JSON Dev",
+    email: "dev@jsontools.com",
+    avatar: "/avatars/dev.jpg",
   },
   teams: [
     {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
+      name: "JSON Dev Tools",
+      logo: Code,
+      plan: "Professional",
     },
   ],
   navMain: [
     {
-      title: "Main",
-      url: "#",
-      icon: SquareTerminal,
+      title: "Home",
+      url: "/",
+      icon: Home,
       isActive: true,
-      items: [
-        { title: "Home", url: "/" },
-        { title: "Dashboard", url: "/dashboard" },
-      ],
     },
     {
-      title: "Tools",
+      title: "JSON Tools",
       url: "#",
-      icon: Bot,
+      icon: Code,
       items: [
-        { title: "JSON Beautifier", url: "/tools/json" },
-        { title: "Go Log Debugger", url: "/tools/log" },
+        { title: "JSON Validator", url: "/tools/validator" },
+        { title: "JSON Path Explorer", url: "/tools/path" },
+        { title: "JSON to Table", url: "/tools/table" },
+        { title: "Go Log Debugger", url: "/tools/go-log-debugger" },
+        { title: "JSON Beautifier", url: "/tools/json-beautifier" },
       ],
     },
   ],
@@ -80,7 +71,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <div className="flex items-center justify-between p-2">
+          <NavUser user={data.user} />
+          <ThemeToggle />
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

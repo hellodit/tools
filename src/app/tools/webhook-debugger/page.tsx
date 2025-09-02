@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { toast } from "sonner"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 
 type HttpMethod = "ALL" | "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS"
 
@@ -62,14 +62,14 @@ export default function WebhookDebuggerPage() {
     setCopyUrl(inboxUrl)
   }, [inboxUrl])
 
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     const u = new URL(`/api/webhook/${effectiveSpaceId}/requests`, window.location.origin)
     if (search) u.searchParams.set("search", search)
     if (method) u.searchParams.set("method", method)
     const res = await fetch(u.toString())
     const data = await res.json()
     setItems(Array.isArray(data.items) ? data.items : [])
-  }
+  }, [effectiveSpaceId, search, method])
 
   useEffect(() => {
     fetchList().catch(() => {})
@@ -91,14 +91,14 @@ export default function WebhookDebuggerPage() {
     return () => {
       es.close()
     }
-  }, [effectiveSpaceId])
+  }, [effectiveSpaceId, fetchList])
 
   useEffect(() => {
     const t = setTimeout(() => {
       fetchList().catch(() => {})
     }, 300)
     return () => clearTimeout(t)
-  }, [search, method, effectiveSpaceId])
+  }, [search, method, effectiveSpaceId, fetchList])
 
   const selected = useMemo(() => {
     const list = Array.isArray(items) ? items : []
@@ -125,7 +125,7 @@ export default function WebhookDebuggerPage() {
     toast.success("URL copied")
   }
 
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     const res = await fetch(`/api/webhook/${effectiveSpaceId}/config`)
     const cfg = await res.json()
     setRespStatus(Number(cfg.status ?? 200))
@@ -133,7 +133,7 @@ export default function WebhookDebuggerPage() {
     setRespContentType(String(cfg.contentType ?? cfg.headers?.["content-type"] ?? "application/json"))
     setRespHeaders(JSON.stringify(cfg.headers ?? { "content-type": cfg.contentType ?? "application/json" }, null, 2))
     setRespBody(typeof cfg.body === "string" ? cfg.body : JSON.stringify(cfg.body ?? { ok: true }, null, 2))
-  }
+  }, [effectiveSpaceId])
 
   const saveConfig = async () => {
     try {
@@ -156,7 +156,7 @@ export default function WebhookDebuggerPage() {
 
   useEffect(() => {
     loadConfig().catch(() => {})
-  }, [effectiveSpaceId])
+  }, [effectiveSpaceId, loadConfig])
 
   return (
     <div className="flex flex-col gap-4">

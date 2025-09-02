@@ -51,7 +51,7 @@ export default function ValidatorPage() {
       }
       setErrors(null)
       return { isValid: true as const }
-    } catch (e) {
+    } catch {
       setErrors(null)
       return { isValid: false as const, error: "Invalid JSON syntax in data or schema" }
     }

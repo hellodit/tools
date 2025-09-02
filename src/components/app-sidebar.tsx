@@ -2,10 +2,6 @@
 
 import * as React from "react"
 import {
-  CheckCircle,
-  FileText,
-  Search,
-  Table,
   Code,
   Home,
 } from "lucide-react"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { JSONPath } from "jsonpath-plus"
 import { JsonEditor } from "@/components/json-editor"
 import { Button } from "@/components/ui/button"
@@ -32,7 +32,7 @@ export default function JsonPathExplorerPage() {
       const obj = JSON.parse(jsonText)
       const output = JSONPath({ path: query, json: obj }) as unknown[]
       setResults(output)
-    } catch (e) {
+    } catch {
       toast.error("Invalid JSON or JSONPath query")
     }
   }

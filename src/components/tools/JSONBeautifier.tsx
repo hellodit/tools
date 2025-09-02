@@ -12,8 +12,9 @@ function tryFormatJSON(input: string, space = 2): { ok: true; out: string } | { 
   try {
     const parsed = JSON.parse(input);
     return { ok: true, out: JSON.stringify(parsed, null, space) };
-  } catch (e: any) {
-    return { ok: false, err: (e?.message as string) || String(e) };
+  } catch (e) {
+    const error = e as Error;
+    return { ok: false, err: error?.message || String(e) };
   }
 }
 

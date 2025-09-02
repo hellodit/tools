@@ -15,17 +15,36 @@ type StackFrame = { func?: string; file?: string; line?: number; };
 type DerivedInfo = { hint?: string; rootFunction?: string; rootFile?: string; rootLine?: number; frames: StackFrame[]; };
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
+interface ParsedLogObject {
+  level?: string;
+  LEVEL?: string;
+  severity?: string;
+  request_id?: string;
+  reqId?: string;
+  requestId?: string;
+  time?: string;
+  timestamp?: string;
+  ts?: string;
+  message?: string;
+  msg?: string;
+  error?: string;
+  err?: string;
+  stack?: string;
+  trace?: string;
+  stacktrace?: string;
+}
+
 function tryParseJSONLine(line: string): Partial<LogEntry> | null {
   try {
-    const obj = JSON.parse(line);
+    const obj = JSON.parse(line) as ParsedLogObject;
     const out: Partial<LogEntry> = {
-      level: obj.level ?? (obj as any).LEVEL ?? (obj as any).severity,
-      request_id: obj.request_id ?? (obj as any).reqId ?? (obj as any).requestId,
-      time: obj.time ?? (obj as any).timestamp ?? (obj as any).ts,
-      message: obj.message ?? (obj as any).msg,
-      error: (obj as any).error ?? (obj as any).err,
-      stack: (obj as any).stack ?? (obj as any).trace ?? (obj as any).stacktrace,
-    } as any;
+      level: obj.level ?? obj.LEVEL ?? obj.severity,
+      request_id: obj.request_id ?? obj.reqId ?? obj.requestId,
+      time: obj.time ?? obj.timestamp ?? obj.ts,
+      message: obj.message ?? obj.msg,
+      error: obj.error ?? obj.err,
+      stack: obj.stack ?? obj.trace ?? obj.stacktrace,
+    };
     return out;
   } catch {
     return null;
@@ -82,10 +101,10 @@ function parseInput(text: string): LogEntry[] {
     if (buffer.length === 0) return;
     const chunk = buffer.join("\n");
     const asJson = tryParseJSONLine(chunk);
-    if (asJson && ((asJson as any).error || (asJson as any).stack || (asJson as any).message)) {
-      const frames = parseGoStack((asJson as any).stack || "");
-      const derived = deriveHint((asJson as any).error || (asJson as any).message, frames);
-      entries.push({ raw: chunk, ...(asJson as any), derived } as LogEntry);
+    if (asJson && (asJson.error || asJson.stack || asJson.message)) {
+      const frames = parseGoStack(asJson.stack || "");
+      const derived = deriveHint(asJson.error || asJson.message, frames);
+      entries.push({ raw: chunk, ...asJson, derived } as LogEntry);
     } else {
       const level = (/\"level\"\s*:\s*\"([^\"]+)\"/.exec(chunk)?.[1]) || (/\blevel=(\w+)/.exec(chunk)?.[1]);
       const request_id = (/\"request_id\"\s*:\s*\"([^\"]+)\"/.exec(chunk)?.[1]) || (/request_id=([\w-]+)/.exec(chunk)?.[1]);
@@ -114,9 +133,9 @@ function parseInput(text: string): LogEntry[] {
     for (const line of lines) {
       const j = tryParseJSONLine(line);
       if (j) {
-        const frames = parseGoStack((j as any).stack || "");
-        const derived = deriveHint((j as any).error || (j as any).message, frames);
-        entries.push({ raw: line, ...(j as any), derived } as LogEntry);
+        const frames = parseGoStack(j.stack || "");
+        const derived = deriveHint(j.error || j.message, frames);
+        entries.push({ raw: line, ...j, derived } as LogEntry);
       }
     }
   }
@@ -128,7 +147,10 @@ function groupByRequest(entries: LogEntry[]) {
   for (const e of entries) {
     const key = e.request_id || "(no req id)";
     if (!map.has(key)) map.set(key, []);
-    (map.get(key) as LogEntry[]).push(e);
+    const entries = map.get(key);
+    if (entries) {
+      entries.push(e);
+    }
   }
   return map;
 }

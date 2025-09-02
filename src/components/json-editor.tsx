@@ -21,7 +21,7 @@ interface JsonEditorProps {
   height?: string
   readOnly?: boolean
   showValidation?: boolean
-  onValidate?: (json: any) => { isValid: boolean; error?: string }
+  onValidate?: (json: unknown) => { isValid: boolean; error?: string }
 }
 
 export function JsonEditor({
@@ -47,7 +47,7 @@ export function JsonEditor({
         const validation = onValidate(parsed)
         setIsValid(validation.isValid)
         setError(validation.error || "")
-      } catch (e) {
+      } catch {
         setIsValid(false)
         setError("Invalid JSON syntax")
       }
@@ -58,7 +58,7 @@ export function JsonEditor({
     try {
       await navigator.clipboard.writeText(value)
       toast.success("Copied to clipboard")
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy to clipboard")
     }
   }

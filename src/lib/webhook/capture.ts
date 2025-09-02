@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { webhookStore } from "@/lib/webhook/store"
+import { webhookStore, HttpMethod } from "@/lib/webhook/store"
 
 function getClientIp(req: NextRequest): string | undefined {
   const xf = req.headers.get("x-forwarded-for")
@@ -11,7 +11,7 @@ function getClientIp(req: NextRequest): string | undefined {
 export async function captureAndStore(req: NextRequest, spaceId: string) {
   const ip = getClientIp(req) || "unknown"
   const url = new URL(req.url)
-  const method = req.method as any
+  const method = req.method as HttpMethod
   const contentType = req.headers.get("content-type") || undefined
   const headersObj: Record<string, string> = {}
   req.headers.forEach((v, k) => (headersObj[k] = v))
@@ -22,6 +22,7 @@ export async function captureAndStore(req: NextRequest, spaceId: string) {
   } catch {}
 
   const entry = webhookStore.append(spaceId, {
+    spaceId,
     method,
     url: url.pathname + url.search,
     headers: headersObj,
@@ -29,7 +30,7 @@ export async function captureAndStore(req: NextRequest, spaceId: string) {
     ip,
     bodyRaw,
     contentType,
-  } as any)
+  })
 
   // Build response based on optional per-space config
   const cfg = webhookStore.getResponseConfig(spaceId)
